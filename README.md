@@ -28,7 +28,7 @@ Made solo in Unity for a 48-hour game jam (theme: *JUGAAD*).
 > Note: `Packages/manifest.json` references a local editor-only package (`com.coplaydev.unity-mcp`) by file path. If Unity reports it missing, delete that line from `manifest.json`. The game does not depend on it.
 
 ## Build
-File > Build Profiles > Android > Build. Install the APK on Quest via Meta Quest Developer Hub or SideQuest.
+File > Build Profiles > Android > Build. Install the APK on Quest via Meta Quest Developer Hub or SideQuest. Step-by-step guide: [Sideloading the APK on Meta Quest (PDF)](docs/Meta-Quest-APK-Sideloading-Guide.pdf).
 
 Tech: Unity 6 (URP), XR Interaction Toolkit 3, OpenXR, IL2CPP ARM64, Vulkan.
 
