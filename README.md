@@ -19,6 +19,9 @@ Made solo in Unity for a 48-hour game jam (theme: *JUGAAD*).
 | Right stick | Turn |
 | Finger | Press switchboard / menu buttons |
 
+## Play on Meta Quest
+See **[INSTALL.md](INSTALL.md)** for a step-by-step guide to installing and running the game on Quest 3 / 3S.
+
 ## Open the project
 1. Install **Unity 6000.0.74f1** with **Android Build Support** (OpenJDK, Android SDK & NDK).
 2. Unity Hub > Add > Add project from disk > select this folder. The first import takes a while.
