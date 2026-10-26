@@ -5,17 +5,36 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Game-end party: when GameFlowManager finishes -> confetti burst, applause, lights flicker once,
-/// a haptic buzz in both hands, and a finger-press "MAIN MENU" button appears in front of the player.
+/// a haptic buzz in both hands, and finger-press buttons appear in front of the player:
+/// [PLAY AGAIN] [NEXT LEVEL] [MAIN MENU] (the first two only if wired). Next level goes through a
+/// fade with a line like 'The next day...' (SceneTransition).
 /// </summary>
 public class EndCelebration : MonoBehaviour
 {
     [SerializeField] private GameFlowManager flow;
+    [Tooltip("Levels built on LevelFlowManager (garage...).")]
+    [SerializeField] private LevelFlowManager levelFlow;
     [SerializeField] private ParticleSystem confetti;
     [SerializeField] private GameObject menuButton;          // PokeActionButton root, starts hidden
     [SerializeField] private string menuScene = "MainMenu";
     [SerializeField] private AudioClip applauseClip;          // optional: real recording
     [SerializeField, Range(0f, 1f)] private float applauseVolume = 0.9f;
     [SerializeField] private AudioClip menuAppearSound;
+
+    [Tooltip("Results card (score + stars). Optional.")]
+    [SerializeField] private LevelResults results;
+
+    [Header("Next level / replay (optional)")]
+    [SerializeField] private GameObject nextButton;           // PokeActionButton root, starts hidden
+    [SerializeField] private GameObject replayButton;
+    [SerializeField] private string nextScene = "Garage";
+    [SerializeField] private string nextLabelEn = "PLAY LEVEL 2", nextLabelHi = "LEVEL 2 KHELO";
+    [SerializeField] private string replayLabelEn = "PLAY AGAIN", replayLabelHi = "DOBARA KHELO";
+    [SerializeField] private string nextLineEn = "The next day...", nextLineHi = "Agle din...";
+    [SerializeField] private float sideAngle = 25f;
+    [SerializeField] private Material fadeMaterial;
+    [SerializeField] private TMPro.TMP_FontAsset lineFont;
+    [SerializeField] private Material lineMaterial;
 
     [Header("Placement")]
     [SerializeField] private float confettiDistance = 0.9f;
@@ -32,7 +51,10 @@ public class EndCelebration : MonoBehaviour
     private void Awake()
     {
         if (menuButton) menuButton.SetActive(false);
+        if (nextButton) nextButton.SetActive(false);
+        if (replayButton) replayButton.SetActive(false);
         if (flow == null) flow = FindFirstObjectByType<GameFlowManager>();
+        if (levelFlow == null) levelFlow = FindFirstObjectByType<LevelFlowManager>();
     }
 
     private void Start()
@@ -42,7 +64,8 @@ public class EndCelebration : MonoBehaviour
 
     private void Update()
     {
-        if (_done || flow == null || !flow.Finished) return;
+        bool finished = (flow != null && flow.EndShown) || (levelFlow != null && levelFlow.Finished);
+        if (_done || !finished) return;
         _done = true;
         StartCoroutine(Celebrate());
     }
@@ -51,6 +74,7 @@ public class EndCelebration : MonoBehaviour
     {
         var head = Camera.main != null ? Camera.main.transform : transform;
         Vector3 fwd = Flat(head.forward);
+        ShowResults(head);
 
         if (confetti)
         {
@@ -65,7 +89,19 @@ public class EndCelebration : MonoBehaviour
 
         yield return Flicker();
         yield return new WaitForSeconds(buttonDelay);
-        ShowMenuButton(head);
+        ShowButtons(head);
+    }
+
+    private void ShowResults(Transform head)
+    {
+        if (results == null) return;
+        if (flow != null && flow.EndShown)
+            results.Show(1, flow.Score, flow.TotalTime, flow.Stars, flow.Rank, flow.GoodScore, flow.MasterScore, head);
+        else if (levelFlow != null && levelFlow.Finished)
+            results.Show(levelFlow.LevelNumber, levelFlow.Score, levelFlow.TotalTime, levelFlow.Stars, levelFlow.Rank, levelFlow.GoodScore, levelFlow.MasterScore, head);
+        else return;
+        var hud = FindFirstObjectByType<TaskHUD>();
+        if (hud) hud.SetPanelVisible(false);   // the card shows the same numbers, nicer
     }
 
     private IEnumerator Flicker()
@@ -85,7 +121,7 @@ public class EndCelebration : MonoBehaviour
         foreach (var l in lights) if (l) l.enabled = true; // always end with the lights ON
     }
 
-    private void ShowMenuButton(Transform head)
+    private void ShowButtons(Transform head)
     {
         if (menuButton == null) return;
         Vector3 fwd = Flat(head.forward);
@@ -102,18 +138,71 @@ public class EndCelebration : MonoBehaviour
         }
         d = Mathf.Max(0.25f, d);
 
-        var pos = head.position + fwd * d + Vector3.up * buttonHeight;
-        menuButton.transform.position = pos;
+        // centre: next level if there is one, else main menu; the others sit on an arc either side
+        bool hasNext = nextButton != null && !string.IsNullOrEmpty(nextScene);
+        if (hasNext)
+        {
+            Place(replayButton, head, fwd, d, -sideAngle, GameLanguage.Pick(replayLabelEn, replayLabelHi), false);
+            Place(nextButton, head, fwd, d, 0f, GameLanguage.Pick(nextLabelEn, nextLabelHi), true);
+            Place(menuButton, head, fwd, d, sideAngle, null, false);
+        }
+        else Place(menuButton, head, fwd, d, 0f, null, true);
+
+        var centre = head.position + fwd * d + Vector3.up * buttonHeight;
+        SfxMix.PlayAt(menuAppearSound ? menuAppearSound : ProceduralSfx.Success, centre, 0.7f);
+    }
+
+    private void Place(GameObject button, Transform head, Vector3 fwd, float d, float angle, string label, bool showHint)
+    {
+        if (button == null) return;
+        Vector3 dir = Quaternion.AngleAxis(angle, Vector3.up) * fwd;
+        var pos = head.position + dir * d + Vector3.up * buttonHeight;
+        button.transform.position = pos;
         var toPlayer = Flat(head.position - pos);
-        if (toPlayer.sqrMagnitude < 1e-4f) toPlayer = -fwd;
-        menuButton.transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up); // face (+Z) towards the player
-        menuButton.SetActive(true);
-        SfxMix.PlayAt(menuAppearSound ? menuAppearSound : ProceduralSfx.Success, pos, 0.7f);
+        if (toPlayer.sqrMagnitude < 1e-4f) toPlayer = -dir;
+        button.transform.rotation = Quaternion.LookRotation(toPlayer, Vector3.up); // face (+Z) towards the player
+        if (label != null)
+        {
+            var l = button.transform.Find("Label");
+            var t = l ? l.GetComponent<TMPro.TMP_Text>() : null;
+            if (t) t.text = label;
+        }
+        var hint = button.transform.Find("Hint");
+        if (hint) hint.gameObject.SetActive(showHint);
+        button.SetActive(true);
+    }
+
+    /// <summary>Wire the NEXT LEVEL button here.</summary>
+    public void GoToNextLevel()
+    {
+        if (SceneTransition.Busy) return;
+        HideButtons();
+        if (fadeMaterial) SceneTransition.Begin(nextScene, GameLanguage.Pick(nextLineEn, nextLineHi), fadeMaterial, lineFont, lineMaterial);
+        else { Time.timeScale = 1f; SceneManager.LoadScene(nextScene); }
+    }
+
+    /// <summary>Wire the PLAY AGAIN button here.</summary>
+    public void Replay()
+    {
+        if (SceneTransition.Busy) return;
+        HideButtons();
+        string scene = SceneManager.GetActiveScene().name;
+        if (fadeMaterial) SceneTransition.Begin(scene, null, fadeMaterial, null, null);
+        else { Time.timeScale = 1f; SceneManager.LoadScene(scene); }
+    }
+
+    private void HideButtons()
+    {
+        if (results) results.Hide();   // never leave the score card over the 'next day' fade
+        if (nextButton) nextButton.SetActive(false);
+        if (replayButton) replayButton.SetActive(false);
+        if (menuButton) menuButton.SetActive(false);
     }
 
     /// <summary>Wire the MAIN MENU button here.</summary>
     public void GoToMainMenu()
     {
+        HideButtons();
         Time.timeScale = 1f;
         SceneManager.LoadScene(menuScene);
     }

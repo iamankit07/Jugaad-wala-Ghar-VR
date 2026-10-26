@@ -67,6 +67,7 @@ public class DoorLatch : MonoBehaviour
     private void Update()
     {
         if (IsLatched || _rb.isKinematic || Time.time < _nextSwingHaptic) return;
+        if (_lock != null && _lock.IsLocked) return; // locked rattle: no continuous swing buzz
         Vector3 axis = transform.TransformDirection(_hinge.axis).normalized;
         float w = Mathf.Abs(Vector3.Dot(_rb.angularVelocity, axis)); // rad/s
         if (w < 0.05f) return;

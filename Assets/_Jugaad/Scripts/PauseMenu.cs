@@ -3,14 +3,18 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// In-game settings / pause menu: RESUME, RESTART, QUIT.
-/// Opened by the settings icon on the task panel, or the left controller's Menu button
+/// In-game settings / pause menu: RESUME, CONTROLS (what every button does), RESTART, MAIN MENU, QUIT.
+/// Opened ONLY by the left controller's Menu button
 /// (Esc in the editor). While open the game time is paused. Always restores Time.timeScale.
 /// </summary>
 public class PauseMenu : MonoBehaviour
 {
+    [Tooltip("Scene for the MAIN MENU button.")]
+    [SerializeField] private string menuScene = "MainMenu";
     [SerializeField] private GameObject panel;              // the pause canvas (world space)
     [SerializeField] private GameObject[] hideWhileOpen;     // e.g. the settings icon
+    [SerializeField] private GameObject mainPage;            // buttons
+    [SerializeField] private GameObject controlsPage;        // CONTROLS list (ControlsInfo)
     [SerializeField] private Transform head;                 // defaults to Camera.main
     [SerializeField] private float distance = 0.9f;
     [SerializeField] private float heightOffset = -0.1f;
@@ -57,6 +61,7 @@ public class PauseMenu : MonoBehaviour
         if (IsOpen || panel == null) return;
         IsOpen = true;
         PlaceInFront();
+        SetPage(false);
         panel.SetActive(true);
         SetHidden(true);
         if (pauseTime) Time.timeScale = 0f;
@@ -73,11 +78,36 @@ public class PauseMenu : MonoBehaviour
         Click();
     }
 
+    /// <summary>CONTROLS button: show what every button does.</summary>
+    public void ShowControls() { Click(); SetPage(true); }
+
+    /// <summary>BACK button on the controls page.</summary>
+    public void ShowMain() { Click(); SetPage(false); }
+
+    private void SetPage(bool controls)
+    {
+        if (mainPage) mainPage.SetActive(!controls);
+        if (controlsPage)
+        {
+            controlsPage.SetActive(controls);
+            var info = controlsPage.GetComponent<ControlsInfo>();
+            if (controls && info) info.ResetPage();
+        }
+    }
+
     public void Restart()
     {
         Time.timeScale = 1f;
         Click();
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    /// <summary>Back to the main menu (level select).</summary>
+    public void GoToMainMenu()
+    {
+        Time.timeScale = 1f;
+        Click();
+        SceneManager.LoadScene(menuScene);
     }
 
     public void Quit()

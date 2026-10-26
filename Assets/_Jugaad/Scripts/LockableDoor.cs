@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 /// <summary>
 /// Locks a physics (HingeJoint) door. While locked the hinge limits are clamped
@@ -33,6 +34,10 @@ public class LockableDoor : MonoBehaviour
     private JointLimits _openLimits;
     private float _closedAngle;
     private float _nextRattleSoundTime;
+    private XRGrabInteractable[] _handles;
+    private Vector3 _closedLocalPos;
+    private Quaternion _closedLocalRot;
+    private bool _frozen;
 
     private void Awake()
     {
@@ -42,6 +47,10 @@ public class LockableDoor : MonoBehaviour
 
         // "Closed" is whichever limit is nearest 0 (door starts closed).
         _closedAngle = Mathf.Abs(_openLimits.min) < Mathf.Abs(_openLimits.max) ? _openLimits.min : _openLimits.max;
+
+        _handles = GetComponentsInChildren<XRGrabInteractable>(true);
+        _closedLocalPos = transform.localPosition;
+        _closedLocalRot = transform.localRotation;
 
         SetLocked(startLocked);
     }
@@ -78,7 +87,42 @@ public class LockableDoor : MonoBehaviour
         }
 
         _hinge.useLimits = true;
+        if (!locked) SetFrozen(false);
         if (_rb) _rb.WakeUp();
+    }
+
+    /// <summary>
+    /// While locked and nobody holds a handle, the leaf is frozen at its closed pose, so bumping it
+    /// (a held book, a remote, the player) cannot shake it or push it a little open. Grabbing a
+    /// handle unfreezes it so pulling still gives the 'it's locked' rattle.
+    /// </summary>
+    private void FixedUpdate()
+    {
+        if (!IsLocked) return;
+        bool held = false;
+        foreach (var h in _handles) if (h != null && h.isSelected) { held = true; break; }
+        SetFrozen(!held);
+    }
+
+    private void SetFrozen(bool frozen)
+    {
+        if (_rb == null || frozen == _frozen) return;
+        _frozen = frozen;
+        if (frozen)
+        {
+            _rb.linearVelocity = Vector3.zero;
+            _rb.angularVelocity = Vector3.zero;
+            _rb.isKinematic = true;
+            transform.localPosition = _closedLocalPos;
+            transform.localRotation = _closedLocalRot;
+            _rb.position = transform.position;
+            _rb.rotation = transform.rotation;
+        }
+        else
+        {
+            _rb.isKinematic = false;
+            _rb.WakeUp();
+        }
     }
 
     private void OnCollisionEnter(Collision collision)

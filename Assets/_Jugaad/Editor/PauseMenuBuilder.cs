@@ -13,8 +13,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactors.Visuals;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 
 /// <summary>
-/// Adds the in-game settings button + pause menu (RESUME / RESTART / QUIT) to the game scene,
-/// plus UI-only controller rays that are invisible unless pointing at a button.
+/// Adds the in-game pause menu (opened with the left controller's MENU button) (RESUME / CONTROLS / RESTART / MAIN MENU / QUIT) to the
+/// level scene, plus UI-only controller rays that only exist while the menu is open (MenuRays).
 /// Menu: Jugaad > Add Pause Menu To Game Scene
 /// </summary>
 public static class PauseMenuBuilder
@@ -40,12 +40,8 @@ public static class PauseMenuBuilder
     [MenuItem("Jugaad/Add Pause Menu To Game Scene")]
     public static void Build()
     {
-        var scene = EditorSceneManager.GetActiveScene();
-        if (scene.path != GameScenePath)
-        {
-            if (scene.isDirty) EditorSceneManager.SaveScene(scene);
-            scene = EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
-        }
+        var scene = EditorSceneManager.GetActiveScene();     // works on whichever level is open (Level 1, Garage...)
+        if (scene.path.EndsWith("MainMenu.unity")) { Debug.LogError("[PauseMenuBuilder] Open a level scene first."); return; }
 
         _font = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontPath);
         _round = AssetDatabase.GetBuiltinExtraResource<Sprite>("UI/Skin/UISprite.psd");
@@ -65,20 +61,8 @@ public static class PauseMenuBuilder
         EnsureEventSystem();
         AddUIRays();
 
-        // ---------- settings icon, top-right of the task panel ----------
-        var iconSprite = ImportIcon();
-        var iconCanvas = WorldCanvas("SettingsButton", hud.transform, new Vector2(110, 110));
-        iconCanvas.localPosition = new Vector3(0.52f, 0.13f, 0f);   // just outside the panel's top-right corner
-        iconCanvas.localRotation = Quaternion.identity;
-        var iconBtn = MakeButton(iconCanvas, "Button", null, Vector2.zero, new Vector2(110, 110), 0, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _circle);
-        var iconImg = new GameObject("Icon", typeof(RectTransform), typeof(Image));
-        iconImg.transform.SetParent(iconBtn.transform, false);
-        var ii = iconImg.GetComponent<Image>();
-        ii.sprite = iconSprite; ii.raycastTarget = false; ii.preserveAspect = true;
-        ((RectTransform)iconImg.transform).sizeDelta = new Vector2(70, 70);
-
         // ---------- pause panel ----------
-        var pause = WorldCanvas("PauseMenuCanvas", null, new Vector2(700, 660));
+        var pause = WorldCanvas("PauseMenuCanvas", null, new Vector2(700, 800));
         var bg = new GameObject("Background", typeof(RectTransform), typeof(Image));
         bg.transform.SetParent(pause, false);
         var brt = (RectTransform)bg.transform;
@@ -86,12 +70,37 @@ public static class PauseMenuBuilder
         var bimg = bg.GetComponent<Image>();
         bimg.sprite = _round; bimg.type = Image.Type.Sliced; bimg.pixelsPerUnitMultiplier = 0.25f; bimg.color = Dark;
 
-        MakeText(pause, "Title", "SETTINGS", 64, Orange, new Vector2(0, 250), new Vector2(640, 90), FontStyles.Bold);
-        var resume = MakeButton(pause, "ResumeButton", "RESUME", new Vector2(0, 120), new Vector2(480, 100), 44, Orange, OrangeHi, OrangeDown, _round, new Color(0.12f, 0.08f, 0.04f));
-        var restart = MakeButton(pause, "RestartButton", "RESTART", new Vector2(0, -5), new Vector2(480, 100), 44, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _round);
-        var quit = MakeButton(pause, "QuitButton", "QUIT", new Vector2(0, -130), new Vector2(480, 100), 44, Red, RedHi, new Color(0.6f, 0.18f, 0.16f), _round);
-        MakeText(pause, "Hint", "Left controller ka MENU button se bhi khulta / band hota hai", 24,
-                 new Color(0.65f, 0.67f, 0.73f), new Vector2(0, -250), new Vector2(640, 60), FontStyles.Normal);
+        // main page: the buttons
+        var main = Page(pause, "MainPage");
+        MakeText(main, "Title", "SETTINGS", 64, Orange, new Vector2(0, 320), new Vector2(640, 90), FontStyles.Bold);
+        var resume = MakeButton(main, "ResumeButton", "RESUME", new Vector2(0, 205), new Vector2(480, 90), 42, Orange, OrangeHi, OrangeDown, _round, new Color(0.12f, 0.08f, 0.04f));
+        var controls = MakeButton(main, "ControlsButton", "CONTROLS", new Vector2(0, 100), new Vector2(480, 90), 42, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _round);
+        var restart = MakeButton(main, "RestartButton", "RESTART", new Vector2(0, -5), new Vector2(480, 90), 42, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _round);
+        var menu = MakeButton(main, "MainMenuButton", "MAIN MENU", new Vector2(0, -110), new Vector2(480, 90), 42, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _round);
+        var quit = MakeButton(main, "QuitButton", "QUIT", new Vector2(0, -215), new Vector2(480, 90), 42, Red, RedHi, new Color(0.6f, 0.18f, 0.16f), _round);
+        var hint = MakeText(main, "Hint", "Left controller ka MENU button se bhi khulta / band hota hai", 24,
+                 new Color(0.65f, 0.67f, 0.73f), new Vector2(0, -320), new Vector2(640, 60), FontStyles.Normal);
+        var loc = hint.gameObject.AddComponent<LocalizedText>();
+        loc.english = "The MENU button on the left controller also opens / closes this";
+        loc.hinglish = "Left controller ka MENU button se bhi khulta / band hota hai";
+
+        // controls page: what every button does (rows are filled in by ControlsInfo at runtime)
+        var ctl = Page(pause, "ControlsPage");
+        MakeText(ctl, "Title", "CONTROLS", 50, Orange, new Vector2(0, 350), new Vector2(640, 70), FontStyles.Bold);
+        var basicsTab = MakeButton(ctl, "BasicsTab", "BASICS", new Vector2(-140, 282), new Vector2(270, 54), 28, Orange, OrangeHi, OrangeDown, _round, new Color(0.12f, 0.08f, 0.04f));
+        var carTab = MakeButton(ctl, "CarTab", "CAR & TOOLS", new Vector2(140, 282), new Vector2(270, 54), 28, Btn, BtnHi, new Color(0.14f, 0.15f, 0.2f), _round);
+        var rows = new GameObject("Rows", typeof(RectTransform));
+        rows.transform.SetParent(ctl, false);
+        ((RectTransform)rows.transform).sizeDelta = Vector2.zero;
+        var back = MakeButton(ctl, "BackButton", "BACK", new Vector2(0, -330), new Vector2(300, 70), 36, Orange, OrangeHi, OrangeDown, _round, new Color(0.12f, 0.08f, 0.04f));
+        var info = ctl.gameObject.AddComponent<ControlsInfo>();
+        var iso = new SerializedObject(info);
+        iso.FindProperty("rows").objectReferenceValue = rows.transform;
+        iso.FindProperty("font").objectReferenceValue = _font;
+        iso.FindProperty("basicsTab").objectReferenceValue = basicsTab;
+        iso.FindProperty("carTab").objectReferenceValue = carTab;
+        iso.ApplyModifiedPropertiesWithoutUndo();
+        ctl.gameObject.SetActive(false);
         pause.gameObject.SetActive(false);
 
         // ---------- logic ----------
@@ -99,23 +108,38 @@ public static class PauseMenuBuilder
         var pm = mgr.AddComponent<PauseMenu>();
         var so = new SerializedObject(pm);
         so.FindProperty("panel").objectReferenceValue = pause.gameObject;
-        var hide = so.FindProperty("hideWhileOpen"); hide.arraySize = 1;
-        hide.GetArrayElementAtIndex(0).objectReferenceValue = iconCanvas.gameObject;
+        so.FindProperty("mainPage").objectReferenceValue = main.gameObject;
+        so.FindProperty("controlsPage").objectReferenceValue = ctl.gameObject;
+        so.FindProperty("hideWhileOpen").arraySize = 0;
         so.ApplyModifiedPropertiesWithoutUndo();
 
-        UnityEventTools.AddPersistentListener(iconBtn.onClick, new UnityAction(pm.Open));
+        // hand rays only while the menu is open (it opens with the left controller's MENU button only)
+        var mr = mgr.AddComponent<MenuRays>();
+        var mso = new SerializedObject(mr);
+        mso.FindProperty("menu").objectReferenceValue = pm;
+        mso.ApplyModifiedPropertiesWithoutUndo();
+
+        // the rays only hit the UI layer (raycastMask), so both canvases must live on it
+        SetLayer(pause.gameObject, 5);
+        pause.GetComponent<Canvas>().sortingOrder = 50;   // drawn over the task panel / phone UI
+
         UnityEventTools.AddPersistentListener(resume.onClick, new UnityAction(pm.Resume));
+        UnityEventTools.AddPersistentListener(controls.onClick, new UnityAction(pm.ShowControls));
         UnityEventTools.AddPersistentListener(restart.onClick, new UnityAction(pm.Restart));
+        UnityEventTools.AddPersistentListener(menu.onClick, new UnityAction(pm.GoToMainMenu));
         UnityEventTools.AddPersistentListener(quit.onClick, new UnityAction(pm.Quit));
+        UnityEventTools.AddPersistentListener(back.onClick, new UnityAction(pm.ShowMain));
+        UnityEventTools.AddPersistentListener(basicsTab.onClick, new UnityAction(info.ShowBasics));
+        UnityEventTools.AddPersistentListener(carTab.onClick, new UnityAction(info.ShowCar));
 
         EditorSceneManager.MarkSceneDirty(scene);
         EditorSceneManager.SaveScene(scene);
-        Debug.Log("[PauseMenuBuilder] Settings button + pause menu added to " + GameScenePath);
+        Debug.Log("[PauseMenuBuilder] Settings button + pause menu added to " + scene.path);
     }
 
     static void EnsureEventSystem()
     {
-        var es = Object.FindObjectOfType<UnityEngine.EventSystems.EventSystem>();
+        var es = Object.FindFirstObjectByType<UnityEngine.EventSystems.EventSystem>();
         if (es == null) es = new GameObject("EventSystem").AddComponent<UnityEngine.EventSystems.EventSystem>();
         foreach (var m in es.GetComponents<UnityEngine.EventSystems.BaseInputModule>())
             if (!(m is XRUIInputModule)) Object.DestroyImmediate(m);
@@ -129,7 +153,7 @@ public static class PauseMenuBuilder
         var starterNearFar = rigPrefab ? rigPrefab.GetComponentsInChildren<NearFarInteractor>(true) : new NearFarInteractor[0];
         var mat = RayMaterial();
 
-        foreach (var direct in Object.FindObjectsOfType<XRDirectInteractor>(true))
+        foreach (var direct in Object.FindObjectsByType<XRDirectInteractor>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             var parent = direct.transform.parent;
             if (parent == null) continue;
@@ -167,9 +191,10 @@ public static class PauseMenuBuilder
             var valid = new Gradient();
             valid.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
                           new[] { new GradientAlphaKey(0.9f, 0f), new GradientAlphaKey(0.4f, 1f) });
+            // the ray only exists while the menu is open (MenuRays), so show a faint line even off the panel
             var invisible = new Gradient();
             invisible.SetKeys(new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
-                              new[] { new GradientAlphaKey(0f, 0f), new GradientAlphaKey(0f, 1f) });
+                              new[] { new GradientAlphaKey(0.45f, 0f), new GradientAlphaKey(0f, 1f) });
             vis.validColorGradient = valid;
             vis.invalidColorGradient = invisible;
             EditorUtility.SetDirty(go);
@@ -210,6 +235,20 @@ public static class PauseMenuBuilder
             ti.SaveAndReimport();
         }
         return AssetDatabase.LoadAssetAtPath<Sprite>(IconPath);
+    }
+
+    static void SetLayer(GameObject go, int layer)
+    {
+        foreach (var t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = layer;
+    }
+
+    static RectTransform Page(RectTransform parent, string name)
+    {
+        var go = new GameObject(name, typeof(RectTransform));
+        go.transform.SetParent(parent, false);
+        var rt = (RectTransform)go.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
+        return rt;
     }
 
     static RectTransform WorldCanvas(string name, Transform parent, Vector2 size)

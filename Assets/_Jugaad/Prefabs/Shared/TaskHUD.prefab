@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5921379817578293739
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5455652890536974457}
+  - component: {fileID: 4318932549304515682}
+  - component: {fileID: 2530694436284369124}
+  m_Layer: 0
+  m_Name: TaskHUD
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5455652890536974457
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5921379817578293739}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 3, y: 1.3, z: 2.4}
+  m_LocalScale: {x: 0.62, y: 0.62, z: 0.62}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4318932549304515682
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5921379817578293739}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c0fbc8ce70e85e54cadd2fc173cfcb01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  font: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  panelMaterial: {fileID: 2100000, guid: 0c1aedf9c4324334596b0c6860f3b823, type: 2}
+  panelSize: {x: 0.82, y: 0.34}
+  charsPerSecond: 32
+  sfxVolume: 0.35
+  fontScale: 1.15
+  textMaterial: {fileID: 2100000, guid: cd30a20c0def667498b1240376024362, type: 2}
+  typeSound: {fileID: 8300000, guid: cdbecb3633bed78458cfa94fb4af7004, type: 3}
+  successSound: {fileID: 8300000, guid: 21cab0da05a47234aba9ec880c5f89fa, type: 3}
+  reminderSound: {fileID: 8300000, guid: 84bcc8f7a15cbd1488546ccd206d5143, type: 3}
+  titleColor: {r: 1, g: 1, b: 1, a: 1}
+  doneColor: {r: 0.45, g: 1, b: 0.45, a: 1}
+  hintColor: {r: 1, g: 0.85, b: 0.35, a: 1}
+  headerColor: {r: 0.7, g: 0.7, b: 0.75, a: 1}
+  scoreColor: {r: 1, g: 0.8, b: 0.2, a: 1}
+  goodToast: {r: 0.45, g: 1, b: 0.45, a: 1}
+  warnToast: {r: 1, g: 0.55, b: 0.3, a: 1}
+  hintsOnPhone: 1
+--- !u!114 &2530694436284369124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5921379817578293739}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25e535bbf8f5fd44780dd04909747311, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  head: {fileID: 0}
+  distance: 1
+  heightOffset: -0.24
+  yawOffset: -22
+  yawThreshold: 25
+  followSpeed: 3
+  minDistance: 0.45
+  wallPadding: 0.08
