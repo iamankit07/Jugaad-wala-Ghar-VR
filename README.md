@@ -55,7 +55,7 @@ Supported headsets: Quest 2, Quest 3, Quest 3S and Quest Pro.
 3. Switch platform to **Android** (File > Build Profiles).
 4. Scenes: `Assets/Scenes/MainMenu.unity` (start), `Assets/Scenes/Level1_Home.unity` and `Assets/Scenes/Garage.unity`.
 
-> Some 3D models come from third-party Unity Asset Store packs that are not included in this repository. The project opens without them, but a few props and the car will show as missing until those packs are added. If Unity reports a missing local package in `Packages/manifest.json`, remove that line; the game does not depend on it.
+> If Unity reports a missing local package in `Packages/manifest.json`, remove that line; the game does not depend on it.
 
 ## Build
 
