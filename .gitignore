@@ -40,11 +40,3 @@ ignore.conf
 Thumbs.db
 crashlytics-build.properties
 sysinfo.txt
-
-# Third-party Unity Asset Store packs (not redistributable)
-/Assets/GarageAssetPack/
-/Assets/GarageAssetPack.meta
-/Assets/Car_Low/
-/Assets/Car_Low.meta
-/Assets/WeaponsAndPropsAssetPack_NAS/
-/Assets/WeaponsAndPropsAssetPack_NAS.meta
